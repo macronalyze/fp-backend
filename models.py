@@ -42,3 +42,8 @@ class LatestStockResponse(BaseModel):
     isin: str
     nse: StockEntry | None = None
     bse: StockEntry | None = None
+
+
+class BhavDownloadAccepted(BaseModel):
+    message: str
+    date: str

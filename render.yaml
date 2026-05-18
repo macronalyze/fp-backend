@@ -9,3 +9,5 @@ services:
     envVars:
       - key: MONGO_URI
         sync: false  # set via Render dashboard (Settings > Environment)
+      - key: SLACK_WEBHOOK_URL
+        sync: false  # set via Render dashboard (Settings > Environment)

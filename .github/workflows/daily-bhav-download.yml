@@ -1,0 +1,17 @@
+name: Daily Bhav Download
+
+on:
+  schedule:
+    # 8 PM IST = 14:30 UTC, weekdays only (Mon-Fri)
+    - cron: "30 14 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  trigger-download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger bhav download
+        run: |
+          curl -sf -X POST "${{ vars.RENDER_APP_URL }}/fp/api/v1/bhav/download" \
+            -H "Content-Type: application/json" \
+            --max-time 60

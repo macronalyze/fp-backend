@@ -1,10 +1,17 @@
+import csv
+import io
+import logging
+import os
 import re
-from datetime import datetime
+import zipfile
+from datetime import date, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+import httpx
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from db import get_db
 from models import (
+    BhavDownloadAccepted,
     ExchangeData,
     LatestStockResponse,
     SearchItem,
@@ -12,6 +19,15 @@ from models import (
     StockDataResponse,
     StockEntry,
 )
+
+logger = logging.getLogger(__name__)
+
+_NSE_URL = "https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{date}_F_0000.csv.zip"
+_BSE_URL = "https://www.bseindia.com/download/BhavCopy/Equity/BhavCopy_BSE_CM_0_0_0_{date}_F_0000.CSV"
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
 
 router = APIRouter()
 
@@ -152,4 +168,171 @@ def get_latest_stock(
         isin=isin,
         nse=StockEntry(**_map_entry(nse_entry)) if nse_entry else None,
         bse=StockEntry(**_map_entry(bse_entry)) if bse_entry else None,
+    )
+
+
+# ── Bhav Download ───────────────────────────────────────────────────────────
+
+
+def _notify_slack(message: str):
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        logger.warning("SLACK_WEBHOOK_URL not set, skipping notification")
+        return
+    try:
+        httpx.post(webhook_url, json={"text": message}, timeout=10)
+    except Exception as e:
+        logger.error(f"Slack notification failed: {e}")
+
+
+def _parse_float(val: str) -> float | None:
+    try:
+        return float(val) if val.strip() else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_int(val: str) -> int | None:
+    try:
+        return int(float(val)) if val.strip() else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _download_nse_csv(target_date: date) -> str | None:
+    url = _NSE_URL.format(date=target_date.strftime("%Y%m%d"))
+    try:
+        resp = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=30)
+        resp.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.error(f"NSE download failed: {e}")
+        return None
+    with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+        csv_name = next((n for n in zf.namelist() if n.endswith(".csv")), None)
+        if not csv_name:
+            logger.error("No CSV found in NSE zip")
+            return None
+        return zf.read(csv_name).decode("utf-8")
+
+
+def _download_bse_csv(target_date: date) -> str | None:
+    url = _BSE_URL.format(date=target_date.strftime("%Y%m%d"))
+    try:
+        resp = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=30)
+        resp.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.error(f"BSE download failed: {e}")
+        return None
+    return resp.text
+
+
+def _parse_and_upsert(csv_text: str, exchange: str) -> tuple[int, list[str]]:
+    """Parse CSV text and upsert into DB. Returns (row_count, new_isins)."""
+    db = get_db()
+    collection = db["raw_bhav_data_v3"]
+    isin_collection = db["isin"]
+
+    existing_isins = set(
+        doc["_id"] for doc in isin_collection.find({}, {"_id": 1})
+    )
+
+    reader = csv.DictReader(io.StringIO(csv_text))
+    count = 0
+    new_isins = set()
+
+    for row in reader:
+        isin = row.get("ISIN", "").strip()
+        if not isin or not isin.startswith("INE"):
+            continue
+
+        trade_dt = datetime.strptime(row["TradDt"].strip(), "%Y-%m-%d")
+        doc_id = f"{isin}_{trade_dt.strftime('%Y-%m')}"
+
+        entry = {
+            "dt": trade_dt,
+            "ex": exchange,
+            "sym": row["TckrSymb"].strip(),
+            "o": _parse_float(row["OpnPric"]),
+            "h": _parse_float(row["HghPric"]),
+            "l": _parse_float(row["LwPric"]),
+            "c": _parse_float(row["ClsPric"]),
+            "la": _parse_float(row["LastPric"]),
+            "pc": _parse_float(row["PrvsClsgPric"]),
+            "tq": _parse_int(row["TtlTradgVol"]),
+            "tv": _parse_float(row["TtlTrfVal"]),
+            "tt": _parse_int(row["TtlNbOfTxsExctd"]),
+        }
+
+        # Overwrite: pull existing entry for same date+exchange, then push
+        collection.update_one(
+            {"_id": doc_id},
+            {"$pull": {"d": {"dt": trade_dt, "ex": exchange}}},
+        )
+        collection.update_one(
+            {"_id": doc_id},
+            {"$push": {"d": entry}},
+            upsert=True,
+        )
+        count += 1
+
+        if isin not in existing_isins:
+            new_isins.add(isin)
+
+    return count, sorted(new_isins)
+
+
+def _run_bhav_download(target_date: date):
+    date_str = target_date.strftime("%Y-%m-%d")
+    _notify_slack(f"⏳ Starting bhav download for *{date_str}*")
+
+    errors = []
+    nse_count = 0
+    bse_count = 0
+    all_new_isins = []
+
+    # NSE
+    nse_csv = _download_nse_csv(target_date)
+    if nse_csv:
+        nse_count, nse_new = _parse_and_upsert(nse_csv, "nse")
+        all_new_isins.extend(nse_new)
+    else:
+        errors.append("NSE download failed")
+
+    # BSE
+    bse_csv = _download_bse_csv(target_date)
+    if bse_csv:
+        bse_count, bse_new = _parse_and_upsert(bse_csv, "bse")
+        all_new_isins.extend(i for i in bse_new if i not in all_new_isins)
+    else:
+        errors.append("BSE download failed")
+
+    # Slack summary
+    if errors and nse_count == 0 and bse_count == 0:
+        _notify_slack(f"❌ Bhav download failed for *{date_str}*\nErrors: {', '.join(errors)}")
+    else:
+        parts = [f"✅ Bhav download complete for *{date_str}*"]
+        parts.append(f"• NSE: {nse_count} records")
+        parts.append(f"• BSE: {bse_count} records")
+        if errors:
+            parts.append(f"• Partial failure: {', '.join(errors)}")
+        if all_new_isins:
+            parts.append(f"• New ISINs ({len(all_new_isins)}): {', '.join(all_new_isins[:20])}")
+            if len(all_new_isins) > 20:
+                parts.append(f"  ... and {len(all_new_isins) - 20} more")
+        _notify_slack("\n".join(parts))
+
+
+@router.post("/bhav/download", response_model=BhavDownloadAccepted, status_code=202)
+def download_bhav(
+    background_tasks: BackgroundTasks,
+    target_date: date | None = Query(None, alias="date"),
+):
+    if target_date is None:
+        target_date = date.today()
+
+    background_tasks.add_task(_run_bhav_download, target_date)
+
+    return BhavDownloadAccepted(
+        message="Bhav download started",
+        date=target_date.isoformat(),
     )
