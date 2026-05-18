@@ -202,28 +202,33 @@ def _parse_int(val: str) -> int | None:
 
 def _download_nse_csv(target_date: date) -> str | None:
     url = _NSE_URL.format(date=target_date.strftime("%Y%m%d"))
+    logger.info(f"Downloading NSE bhav: {url}")
     try:
         resp = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPError as e:
         logger.error(f"NSE download failed: {e}")
         return None
+    logger.info(f"NSE download complete, size={len(resp.content)} bytes")
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
         csv_name = next((n for n in zf.namelist() if n.endswith(".csv")), None)
         if not csv_name:
             logger.error("No CSV found in NSE zip")
             return None
+        logger.info(f"Extracted CSV from zip: {csv_name}")
         return zf.read(csv_name).decode("utf-8")
 
 
 def _download_bse_csv(target_date: date) -> str | None:
     url = _BSE_URL.format(date=target_date.strftime("%Y%m%d"))
+    logger.info(f"Downloading BSE bhav: {url}")
     try:
         resp = httpx.get(url, headers=_HEADERS, follow_redirects=True, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPError as e:
         logger.error(f"BSE download failed: {e}")
         return None
+    logger.info(f"BSE download complete, size={len(resp.content)} bytes")
     return resp.text
 
 
@@ -275,7 +280,11 @@ def _parse_and_upsert(csv_text: str, exchange: str) -> tuple[int, list[str]]:
             new_isins.add(isin)
 
     if not entries_by_doc:
+        logger.warning(f"No INE records found for {exchange}")
         return 0, []
+
+    count = sum(len(entries) for entries in entries_by_doc.values())
+    logger.info(f"Parsed {count} records for {exchange} across {len(entries_by_doc)} documents")
 
     # Bulk push: add all entries grouped by doc
     push_ops = [
@@ -289,14 +298,21 @@ def _parse_and_upsert(csv_text: str, exchange: str) -> tuple[int, list[str]]:
         )
         for doc_id, entries in entries_by_doc.items()
     ]
-    collection.bulk_write(push_ops, ordered=False)
+    result = collection.bulk_write(push_ops, ordered=False)
+    logger.info(
+        f"DB write complete for {exchange}: "
+        f"matched={result.matched_count}, upserted={result.upserted_count}, modified={result.modified_count}"
+    )
 
-    count = sum(len(entries) for entries in entries_by_doc.values())
+    if new_isins:
+        logger.info(f"New ISINs detected for {exchange}: {len(new_isins)}")
+
     return count, sorted(new_isins)
 
 
 def _run_bhav_download(target_date: date):
     date_str = target_date.strftime("%Y-%m-%d")
+    logger.info(f"=== Bhav download started for {date_str} ===")
     _notify_slack(f"⏳ Starting bhav download for *{date_str}*")
 
     errors = []
@@ -321,6 +337,7 @@ def _run_bhav_download(target_date: date):
         errors.append("BSE download failed")
 
     # Slack summary
+    logger.info(f"=== Bhav download finished for {date_str}: NSE={nse_count}, BSE={bse_count}, errors={errors} ===")
     if errors and nse_count == 0 and bse_count == 0:
         _notify_slack(f"❌ Bhav download failed for *{date_str}*\nErrors: {', '.join(errors)}")
     else:
@@ -344,6 +361,7 @@ def download_bhav(
     if target_date is None:
         target_date = date.today()
 
+    logger.info(f"Bhav download requested for date={target_date.isoformat()}")
     background_tasks.add_task(_run_bhav_download, target_date)
 
     return BhavDownloadAccepted(
