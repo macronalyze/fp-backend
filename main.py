@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from db import close, connect
 from routers.stock import router as stock_router
+from routers.mcap import router as mcap_router
 from routers.auth import router as auth_router
 
 logging.basicConfig(
@@ -37,4 +38,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(stock_router, prefix="/fp/api/v1")
+app.include_router(mcap_router, prefix="/fp/api/v1")
 app.include_router(auth_router, prefix="/fp/api/v1")

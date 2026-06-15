@@ -47,3 +47,28 @@ class LatestStockResponse(BaseModel):
 class BhavDownloadAccepted(BaseModel):
     message: str
     date: str
+
+
+class McapEntry(BaseModel):
+    date: str
+    face_value: float | None = None
+    issue_size: int | None = None
+    market_cap: float | None = None
+
+
+class McapDataResponse(BaseModel):
+    isin: str
+    source: str
+    count: int
+    data: list[McapEntry]
+
+
+class LatestMcapResponse(BaseModel):
+    isin: str
+    source: str
+    entry: McapEntry | None = None
+
+
+class McapDownloadAccepted(BaseModel):
+    message: str
+    date: str
