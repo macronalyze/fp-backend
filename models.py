@@ -72,3 +72,65 @@ class LatestMcapResponse(BaseModel):
 class McapDownloadAccepted(BaseModel):
     message: str
     date: str
+
+
+# ── Datasets ────────────────────────────────────────────────────────────────
+
+
+class Sector(BaseModel):
+    id: str
+    name: str
+    weight: float | None = None
+
+
+class MonthlyEntry(BaseModel):
+    period: str
+    label: str
+    provisional: bool | None = None
+    index: dict[str, float] | None = None
+    growth: dict[str, float] | None = None
+    values: dict[str, float] | None = None
+
+
+class YearlyEntry(BaseModel):
+    year: str
+    provisional: bool | None = None
+    index: dict[str, float] | None = None
+    growth: dict[str, float] | None = None
+    values: dict[str, float] | None = None
+
+
+class DatasetSummary(BaseModel):
+    id: str
+    name: str
+    shortName: str
+    icon: str
+    latestPeriod: str | None = None
+    latestGrowth: float | None = None
+    cumulativeGrowth: float | None = None
+    cumulativePeriod: str | None = None
+    status: str | None = None
+    releaseDate: str | None = None
+
+
+class CountryDatasets(BaseModel):
+    country: str
+    countryName: str
+    datasets: list[DatasetSummary]
+
+
+class DatasetDetail(BaseModel):
+    id: str
+    name: str
+    shortName: str
+    country: str
+    baseYear: str | None = None
+    baseValue: float | None = None
+    source: str | None = None
+    releaseDate: str | None = None
+    nextRelease: str | None = None
+    description: str | None = None
+    sectors: list[Sector] = []
+    commodities: list[str] = []
+    monthly: list[MonthlyEntry] = []
+    yearly: list[YearlyEntry] = []

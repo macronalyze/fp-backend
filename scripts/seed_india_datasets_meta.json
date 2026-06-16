@@ -1,0 +1,47 @@
+[
+  {
+    "_id": "india:iip",
+    "id": "iip",
+    "country": "india",
+    "name": "Index of Industrial Production",
+    "shortName": "IIP Item Charts",
+    "icon": "precision_manufacturing",
+    "latestPeriod": "Mar 2026",
+    "latestGrowth": null,
+    "status": "available"
+  },
+  {
+    "_id": "india:stock-comparison",
+    "id": "stock-comparison",
+    "country": "india",
+    "name": "Stock Market Comparison",
+    "shortName": "Stock Comparison",
+    "icon": "show_chart",
+    "latestPeriod": "Live",
+    "latestGrowth": null,
+    "status": "available"
+  },
+  {
+    "_id": "india:hl-analysis",
+    "id": "hl-analysis",
+    "country": "india",
+    "name": "Import & Export – High Level Analysis",
+    "shortName": "Trade HL Analysis",
+    "icon": "analytics",
+    "latestPeriod": "Feb 2026",
+    "latestGrowth": null,
+    "status": "available"
+  },
+  {
+    "_id": "india:import-export",
+    "id": "import-export",
+    "country": "india",
+    "name": "Import / Export Trade Data",
+    "shortName": "Trade Data",
+    "icon": "local_shipping",
+    "latestPeriod": "Feb 2026",
+    "latestGrowth": null,
+    "status": "available",
+    "releaseDate": "2026-03-15"
+  }
+]
