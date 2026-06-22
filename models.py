@@ -6,6 +6,9 @@ class SearchItem(BaseModel):
     name: str
     nse_symbol: str | None = None
     bse_code: int | None = None
+    industry: str | None = None
+    sector: str | None = None
+    free_float_shares: int | None = None
 
 
 class SearchResponse(BaseModel):
@@ -34,12 +37,24 @@ class ExchangeData(BaseModel):
 
 class StockDataResponse(BaseModel):
     isin: str
+    name: str | None = None
+    nse_symbol: str | None = None
+    bse_code: int | None = None
+    industry: str | None = None
+    sector: str | None = None
+    free_float_shares: int | None = None
     nse: ExchangeData | None = None
     bse: ExchangeData | None = None
 
 
 class LatestStockResponse(BaseModel):
     isin: str
+    name: str | None = None
+    nse_symbol: str | None = None
+    bse_code: int | None = None
+    industry: str | None = None
+    sector: str | None = None
+    free_float_shares: int | None = None
     nse: StockEntry | None = None
     bse: StockEntry | None = None
 
@@ -47,6 +62,50 @@ class LatestStockResponse(BaseModel):
 class BhavDownloadAccepted(BaseModel):
     message: str
     date: str
+
+
+class IndustryPerformance(BaseModel):
+    industry: str
+    growth_pct: float
+    stock_count: int
+
+
+class SectorPerformance(BaseModel):
+    sector: str
+    growth_pct: float
+    industry_count: int
+    stock_count: int
+    industries: list[IndustryPerformance]
+
+
+class SectorPerformanceResponse(BaseModel):
+    start_date: str
+    end_date: str
+    stock_count: int
+    sectors: list[SectorPerformance]
+
+
+class SectorStockPerformance(BaseModel):
+    isin: str
+    name: str | None = None
+    nse_symbol: str | None = None
+    bse_code: int | None = None
+    industry: str
+    exchange: str
+    open_price: float
+    close_price: float
+    open_mcap: float
+    close_mcap: float
+    growth_pct: float
+
+
+class SectorStockPerformanceResponse(BaseModel):
+    sector: str
+    industry: str
+    start_date: str
+    end_date: str
+    stock_count: int
+    stocks: list[SectorStockPerformance]
 
 
 class McapEntry(BaseModel):
@@ -58,6 +117,12 @@ class McapEntry(BaseModel):
 
 class McapDataResponse(BaseModel):
     isin: str
+    name: str | None = None
+    nse_symbol: str | None = None
+    bse_code: int | None = None
+    industry: str | None = None
+    sector: str | None = None
+    free_float_shares: int | None = None
     source: str
     count: int
     data: list[McapEntry]
@@ -65,13 +130,14 @@ class McapDataResponse(BaseModel):
 
 class LatestMcapResponse(BaseModel):
     isin: str
+    name: str | None = None
+    nse_symbol: str | None = None
+    bse_code: int | None = None
+    industry: str | None = None
+    sector: str | None = None
+    free_float_shares: int | None = None
     source: str
     entry: McapEntry | None = None
-
-
-class McapDownloadAccepted(BaseModel):
-    message: str
-    date: str
 
 
 # ── Datasets ────────────────────────────────────────────────────────────────
