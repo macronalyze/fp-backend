@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -200,3 +202,34 @@ class DatasetDetail(BaseModel):
     commodities: list[str] = []
     monthly: list[MonthlyEntry] = []
     yearly: list[YearlyEntry] = []
+
+
+# ── IIP Items ──────────────────────────────────────────────────────────────
+
+
+class IipSeriesEntry(BaseModel):
+    period: str
+    label: str
+    value: float
+    provisional: bool | None = None
+    momPercent: float | None = None
+    yoyPercent: float | None = None
+
+
+class IipLine(BaseModel):
+    id: str
+    label: str
+    nic2: str
+    nic2Name: str
+    nic5: int | None = None
+    itemCount: int
+    unit: str | None = None
+    series: list[IipSeriesEntry]
+
+
+class IipItemsResponse(BaseModel):
+    level: Literal["nic2", "nic5", "item"]
+    count: int
+    earliestPeriod: str | None = None
+    latestPeriod: str | None = None
+    lines: list[IipLine]

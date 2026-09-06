@@ -1,10 +1,25 @@
 [
   {
+    "_id": "india:iip-item-level",
+    "id": "iip-item-level",
+    "country": "india",
+    "name": "Index of Industrial Production - Item Level",
+    "shortName": "IIP Item Charts",
+    "icon": "table_chart",
+    "baseYear": "2022-23",
+    "baseValue": 100,
+    "source": "National Statistical Office (NSO), MoSPI",
+    "description": "Item-group level IIP indices under the 2022-23 base year series, published monthly starting April 2023 (Apr-23), broken down by NIC 2-digit sector and NIC 5-digit item group.",
+    "latestPeriod": "Jun 2026",
+    "latestGrowth": null,
+    "status": "available"
+  },
+  {
     "_id": "india:iip",
     "id": "iip",
     "country": "india",
     "name": "Index of Industrial Production",
-    "shortName": "IIP Item Charts",
+    "shortName": "IIP Item Charts - Archive",
     "icon": "precision_manufacturing",
     "latestPeriod": "Mar 2026",
     "latestGrowth": null,

@@ -13,6 +13,7 @@ from routers.stock import router as stock_router
 from routers.mcap import router as mcap_router
 from routers.auth import router as auth_router
 from routers.datasets import router as datasets_router
+from routers.iip_items import router as iip_items_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,3 +43,4 @@ app.include_router(stock_router, prefix="/fp/api/v1")
 app.include_router(mcap_router, prefix="/fp/api/v1")
 app.include_router(auth_router, prefix="/fp/api/v1")
 app.include_router(datasets_router, prefix="/fp/api/v1")
+app.include_router(iip_items_router, prefix="/fp/api/v1")
