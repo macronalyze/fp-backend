@@ -1,5 +1,6 @@
 fastapi[all]
 pymongo[srv]
+pip-system-certs
 google-auth
 python-jose[cryptography]
 requests
