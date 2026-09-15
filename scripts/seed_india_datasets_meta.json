@@ -1,5 +1,35 @@
 [
   {
+    "_id": "india:core-industries",
+    "id": "core-industries",
+    "country": "india",
+    "name": "Index of Core Industries",
+    "shortName": "Core Industries",
+    "icon": "factory",
+    "baseYear": "2022-23",
+    "baseValue": 100,
+    "source": "Ministry of Commerce & Industry, DPIIT",
+    "description": "The Index of Core Industries (ICI) measures the combined and individual performance of production of nine core industries under the revised 2022-23 base year series (Iron Ore added; base updated from 2011-12).",
+    "latestPeriod": null,
+    "latestGrowth": null,
+    "status": "available"
+  },
+  {
+    "_id": "india:eight-core-industries",
+    "id": "eight-core-industries",
+    "country": "india",
+    "name": "Index of Eight Core Industries",
+    "shortName": "8 Core Industries - Archive",
+    "icon": "factory",
+    "baseYear": "2011-12",
+    "baseValue": 100,
+    "source": "Ministry of Commerce & Industry, DPIIT",
+    "description": "Legacy ICI series (Base Year 2011-12, 8 sectors). Discontinued after May 2026; superseded by the 2022-23 base year series.",
+    "latestPeriod": "May 2026",
+    "latestGrowth": null,
+    "status": "archived"
+  },
+  {
     "_id": "india:iip-item-level",
     "id": "iip-item-level",
     "country": "india",
